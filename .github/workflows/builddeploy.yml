@@ -41,7 +41,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
-            VITE_GH_TOKEN: ${{ env.VITE_GH_TOKEN }}
+            VITE_GH_TOKEN: ${{ secrets.VITE_GH_TOKEN }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
