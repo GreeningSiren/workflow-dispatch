@@ -120,6 +120,7 @@ const useGHworkflow = (username: string) => {
       const error = err as Error;
       console.error(`Failed to trigger workflow for repo ${repo}:`, error.message);
       setError(error.message);
+      setTimeout(() => setError(null), 3000);
     }
   };
 
