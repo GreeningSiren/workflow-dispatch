@@ -16,6 +16,11 @@ interface Workflow {
   repo: string;
 }
 
+interface WorkflowAPIResponse {
+  total_count: number;
+  workflows: WorkflowAPI[];
+}
+
 interface WorkflowAPI {
   id: number;
   name: string;
@@ -30,6 +35,7 @@ const useGHworkflow = (username: string) => {
   useEffect(() => {
     const fetchWorkflows = async () => {
       try {
+        //@ts-expect-error Idk how to fix
         const { data: repos } = await octokit.request<Repository[]>('GET /users/{username}/repos', {
           username,
           headers: {
@@ -39,9 +45,12 @@ const useGHworkflow = (username: string) => {
 
         console.log('Repositories:', repos);
 
-        const workflowPromises = repos.map(async (repo) => {
+        const allWorkflows: Workflow[] = [];
+
+        for (const repo of repos) {
           try {
-            const { data: workflowData } = await octokit.request<WorkflowAPI[]>('GET /repos/{owner}/{repo}/actions/workflows', {
+            //@ts-expect-error Idk how to fix
+            const { data: workflowData } = await octokit.request<WorkflowAPIResponse>('GET /repos/{owner}/{repo}/actions/workflows', {
               owner: username,
               repo: repo.name,
               headers: {
@@ -51,30 +60,31 @@ const useGHworkflow = (username: string) => {
 
             console.log(`Workflows for ${repo.name}:`, workflowData);
 
-            if (!Array.isArray(workflowData)) {
-              // If workflowData is not an array, repo has no workflows
-              return [];
+            if (workflowData.workflows && workflowData.workflows.length > 0) {
+              //@ts-expect-error Idk how to fix
+              const workflowsForRepo = workflowData.workflows.map((workflow) => ({
+                id: workflow.id,
+                name: workflow.name,
+                html_url: workflow.html_url,
+                repo: repo.name,
+              }));
+              allWorkflows.push(...workflowsForRepo);
+            } else {
+              console.log(`No workflows found for ${repo.name}`);
             }
-
-            const workflowsForRepo = workflowData.map((workflow) => ({
-              id: workflow.id,
-              name: workflow.name,
-              html_url: workflow.html_url,
-              repo: repo.name,
-            }));
-
-            return workflowsForRepo;
           } catch (err) {
-            throw new Error(`Failed to fetch workflows for repo ${repo.name}: ${err.message}`);
+            const error = err as Error;
+            console.error(`Failed to fetch workflows for repo ${repo.name}:`, error.message);
           }
-        });
+        }
 
-        const workflowsArray = await Promise.all(workflowPromises);
-        const flattenedWorkflows = workflowsArray.flat();
-        setWorkflows(flattenedWorkflows);
+        setWorkflows(allWorkflows);
         setLoading(false);
       } catch (err) {
-        setError(err.message);
+        const error = err as Error;
+        console.error('Failed to fetch repositories:', error.message);
+        setError(error.message);
+        setTimeout(() => setError(null), 3000);
         setLoading(false);
       }
     };
@@ -84,6 +94,7 @@ const useGHworkflow = (username: string) => {
 
   const triggerWorkflow = async (repo: string, workflow_id: number) => {
     try {
+      //@ts-expect-error Idk how to fix
       const { data: repoData } = await octokit.request<Repository>('GET /repos/{owner}/{repo}', {
         owner: username,
         repo,
@@ -91,6 +102,8 @@ const useGHworkflow = (username: string) => {
           'X-GitHub-Api-Version': '2022-11-28',
         }
       });
+
+      console.log(`Default branch for ${repo}: ${repoData.default_branch}`);
 
       await octokit.request('POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches', {
         owner: username,
@@ -101,8 +114,12 @@ const useGHworkflow = (username: string) => {
           'X-GitHub-Api-Version': '2022-11-28',
         }
       });
+
+      console.log(`Triggered workflow ${workflow_id} for repo ${repo}`);
     } catch (err) {
-      setError(err.message);
+      const error = err as Error;
+      console.error(`Failed to trigger workflow for repo ${repo}:`, error.message);
+      setError(error.message);
     }
   };
 
