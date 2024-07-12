@@ -1,6 +1,5 @@
 {
   "name": "gs-workflow-dispatch",
-  "homepage": "https://github.com/GreeningSiren/workflow-dispatch",
   "private": true,
   "version": "0.0.0",
   "type": "module",
