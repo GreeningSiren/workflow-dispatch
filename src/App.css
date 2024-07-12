@@ -1,0 +1,51 @@
+/* src/App.css */
+.app {
+  font-family: Arial, sans-serif;
+  padding: 20px;
+  text-align: center;
+}
+
+.workflow-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.workflow-card {
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin: 10px;
+  padding: 20px;
+  width: 300px;
+  transition: transform 0.2s;
+}
+
+.workflow-card:hover {
+  transform: scale(1.05);
+}
+
+.workflow-card h3 {
+  margin-top: 0;
+}
+
+.workflow-card a {
+  color: #0366d6;
+  text-decoration: none;
+}
+
+.workflow-card button {
+  background-color: #28a745;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+  padding: 10px 15px;
+  margin-top: 10px;
+  text-align: center;
+}
+
+.workflow-card button:hover {
+  background-color: #218838;
+}
