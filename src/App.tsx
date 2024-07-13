@@ -3,38 +3,41 @@ import React, { useState, useEffect } from 'react';
 import useGHworkflow from './hooks/useGHworkflow';
 import './App.css';
 
+interface Workflow {
+  id: number;
+  name: string;
+  html_url: string;
+  repo: string;
+}
+interface RepositoryWorkflows {
+  [repo: string]: Workflow[];
+}
+
 const App: React.FC = () => {
   const { workflows, loading, error, triggerWorkflow } = useGHworkflow('GreeningSiren');
-  const [modalOpen, setModalOpen] = useState(false); // State for controlling modal
+  const [modalOpen, setModalOpen] = useState(false);
 
-  // Effect to open modal when error occurs
   useEffect(() => {
     if (error) {
       setModalOpen(true);
     }
   }, [error]);
 
-  const handleTrigger = (repo: string, workflowId: number) => {
+  const handleWorkflowTrigger = (repo: string, workflowId: number) => {
     triggerWorkflow(repo, workflowId);
   };
 
-  // Group workflows by repository
-  //@ts-expect-error myrzi me da tormozq chatgpt
-  const groupedWorkflows: { [key: string]: Workflow[] } = {};
+  const groupedWorkflows: RepositoryWorkflows = {};
   workflows.forEach((workflow) => {
-    if (!groupedWorkflows[workflow.repo]) {
-      groupedWorkflows[workflow.repo] = [];
-    }
+    groupedWorkflows[workflow.repo] = groupedWorkflows[workflow.repo] || [];
     groupedWorkflows[workflow.repo].push(workflow);
   });
 
-  // Function to close modal
   const closeModal = () => {
     setModalOpen(false);
   };
 
-  // Render modal content
-  const renderModalContent = () => (
+  const renderErrorModal = () => (
     <div className="modal" style={{ display: modalOpen ? 'block' : 'none' }}>
       <div className="modal-content">
         <span className="close" onClick={closeModal}>&times;</span>
@@ -49,7 +52,7 @@ const App: React.FC = () => {
         <h1>GitHub Repository Workflows</h1>
       </div>
       {loading && <div className="loading">Loading...</div>}
-      {error && renderModalContent()} {/* Render modal if error exists */}
+      {error && renderErrorModal()}
       <div className="repo-list">
         {Object.keys(groupedWorkflows).length > 0 ? (
           Object.keys(groupedWorkflows).map((repoName) => (
@@ -65,7 +68,7 @@ const App: React.FC = () => {
                     <a href={workflow.html_url} target="_blank" rel="noopener noreferrer">
                       {workflow.name}
                     </a>
-                    <button onClick={() => handleTrigger(workflow.repo, workflow.id)}>
+                    <button onClick={() => handleWorkflowTrigger(repoName, workflow.id)}>
                       Trigger Workflow
                     </button>
                   </li>
