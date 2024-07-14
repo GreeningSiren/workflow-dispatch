@@ -52,6 +52,7 @@ const App: React.FC = () => {
         <h1>GitHub Repository Workflows</h1>
       </div>
       {loading && <div className="loading">Loading...</div>}
+      {error && <div className="overlay"></div>}
       {error && renderErrorModal()}
       <div className="repo-list">
         {Object.keys(groupedWorkflows).length > 0 ? (
