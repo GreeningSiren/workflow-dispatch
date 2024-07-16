@@ -116,6 +116,8 @@ const useGHworkflow = (username: string) => {
       });
 
       console.log(`Triggered workflow ${workflow_id} for repo ${repo}`);
+      setError(`Succesfully triggered workflow ${workflow_id} for repo ${repo}`);
+      setTimeout(() => setError(null), 3000);
     } catch (err) {
       const error = err as Error;
       console.error(`Failed to trigger workflow for repo ${repo}:`, error.message);

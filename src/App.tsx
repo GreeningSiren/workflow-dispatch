@@ -41,7 +41,7 @@ const App: React.FC = () => {
     <div className="modal" style={{ display: modalOpen ? 'block' : 'none' }}>
       <div className="modal-content">
         <span className="close" onClick={closeModal}>&times;</span>
-        <p>Error: {error}</p>
+        <p>{error}</p>
       </div>
     </div>
   );
@@ -51,7 +51,7 @@ const App: React.FC = () => {
       <div className="header">
         <h1>GitHub Repository Workflows</h1>
       </div>
-      {loading && <div className="loading">Loading...</div>}
+      {loading && <div className="loading">Loading Workflows...</div>}
       {error && <div className="overlay"></div>}
       {error && renderErrorModal()}
       <div className="repo-list">
@@ -78,7 +78,7 @@ const App: React.FC = () => {
             </div>
           ))
         ) : (
-          !loading && <div className="loading">No workflows found.</div>
+          !loading && <div className="loading">Oops. No workflows found.</div>
         )}
       </div>
     </div>
