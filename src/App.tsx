@@ -8,6 +8,8 @@ interface Workflow {
   name: string;
   html_url: string;
   repo: string;
+  default_branch: string;
+  path: string;
 }
 interface RepositoryWorkflows {
   [repo: string]: Workflow[];
@@ -23,8 +25,8 @@ const App: React.FC = () => {
     }
   }, [error]);
 
-  const handleWorkflowTrigger = (repo: string, workflowId: number) => {
-    triggerWorkflow(repo, workflowId);
+  const handleWorkflowTrigger = (repo: string, workflowId: number, default_branch: string) => {
+    triggerWorkflow(repo, workflowId, default_branch);
   };
 
   const groupedWorkflows: RepositoryWorkflows = {};
@@ -69,7 +71,7 @@ const App: React.FC = () => {
                     <a href={workflow.html_url} target="_blank" rel="noopener noreferrer">
                       {workflow.name}
                     </a>
-                    <button onClick={() => handleWorkflowTrigger(repoName, workflow.id)}>
+                    <button onClick={() => handleWorkflowTrigger(repoName, workflow.id, workflow.default_branch)}>
                       Trigger Workflow
                     </button>
                   </li>

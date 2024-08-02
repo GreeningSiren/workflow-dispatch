@@ -1,6 +1,7 @@
 // src/hooks/useGHworkflow.ts
 import { useState, useEffect } from 'react';
 import { Octokit } from "@octokit/core";
+import fetchYaml from './FetchYaml.tsx'; // Adjust the path as necessary
 
 const octokit = new Octokit({ auth: import.meta.env.VITE_GH_TOKEN });
 
@@ -14,6 +15,8 @@ interface Workflow {
   name: string;
   html_url: string;
   repo: string;
+  default_branch: string;
+  path: string;
 }
 
 interface WorkflowAPIResponse {
@@ -25,6 +28,7 @@ interface WorkflowAPI {
   id: number;
   name: string;
   html_url: string;
+  path: string;
 }
 
 const useGHworkflow = (username: string) => {
@@ -35,7 +39,8 @@ const useGHworkflow = (username: string) => {
   useEffect(() => {
     const fetchWorkflows = async () => {
       try {
-        //@ts-expect-error Idk how to fix
+        // Fetch repositories
+        //@ts-expect-error It is supposed to be Repository[]
         const { data: repos } = await octokit.request<Repository[]>('GET /users/{username}/repos', {
           username,
           headers: {
@@ -49,7 +54,20 @@ const useGHworkflow = (username: string) => {
 
         for (const repo of repos) {
           try {
-            //@ts-expect-error Idk how to fix
+            // Fetch repository details to get the default branch
+            //@ts-expect-error It's supposed to return
+            const { data: repoData } = await octokit.request<Repository>('GET /repos/{owner}/{repo}', {
+              owner: username,
+              repo: repo.name,
+              headers: {
+                'X-GitHub-Api-Version': '2022-11-28',
+              }
+            });
+
+            console.log(`Repository details for ${repo.name}:`, repoData);
+
+            // Fetch workflows for the repository
+            //@ts-expect-error It's supposed to return WorkflowAPIResponse
             const { data: workflowData } = await octokit.request<WorkflowAPIResponse>('GET /repos/{owner}/{repo}/actions/workflows', {
               owner: username,
               repo: repo.name,
@@ -60,21 +78,36 @@ const useGHworkflow = (username: string) => {
 
             console.log(`Workflows for ${repo.name}:`, workflowData);
 
-            if (workflowData.workflows && workflowData.workflows.length > 0) {
-              //@ts-expect-error Idk how to fix
-              const workflowsForRepo = workflowData.workflows.map((workflow) => ({
-                id: workflow.id,
-                name: workflow.name,
-                html_url: workflow.html_url,
-                repo: repo.name,
-              }));
-              allWorkflows.push(...workflowsForRepo);
-            } else {
-              console.log(`No workflows found for ${repo.name}`);
+            // Check each workflow for dispatch capabilities
+            for (const workflow of workflowData.workflows) {
+              // Special case: skip YAML check if the workflow name is "pages-build-deployment"
+              if (workflow.name === 'pages-build-deployment') {
+                console.log(`Skipping workflow dispatch check for ${workflow.name} in ${repo.name}`);
+                continue; // Skip this workflow
+              }
+
+              // Fetch and check the YAML file for `workflow_dispatch`
+              const { hasWorkflowDispatch, error: yamlError } = await fetchYaml(username, repo.name, workflow.path, repoData.default_branch);
+
+              if (yamlError) {
+                console.error(`Error fetching YAML for workflow ${workflow.name} in ${repo.name}:`, yamlError);
+                continue;
+              }
+
+              if (hasWorkflowDispatch) {
+                allWorkflows.push({
+                  id: workflow.id,
+                  name: workflow.name,
+                  html_url: workflow.html_url,
+                  repo: repo.name,
+                  default_branch: repoData.default_branch,
+                  path: workflow.path,
+                });
+              }
             }
           } catch (err) {
             const error = err as Error;
-            console.error(`Failed to fetch workflows for repo ${repo.name}:`, error.message);
+            console.error(`Failed to fetch workflows or repository details for repo ${repo.name}:`, error.message);
           }
         }
 
@@ -92,31 +125,20 @@ const useGHworkflow = (username: string) => {
     fetchWorkflows();
   }, [username]);
 
-  const triggerWorkflow = async (repo: string, workflow_id: number) => {
+  const triggerWorkflow = async (repo: string, workflow_id: number, default_branch: string) => {
     try {
-      //@ts-expect-error Idk how to fix
-      const { data: repoData } = await octokit.request<Repository>('GET /repos/{owner}/{repo}', {
-        owner: username,
-        repo,
-        headers: {
-          'X-GitHub-Api-Version': '2022-11-28',
-        }
-      });
-
-      console.log(`Default branch for ${repo}: ${repoData.default_branch}`);
-
       await octokit.request('POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches', {
         owner: username,
         repo,
         workflow_id,
-        ref: repoData.default_branch, // Use the default branch of the repository
+        ref: default_branch,
         headers: {
           'X-GitHub-Api-Version': '2022-11-28',
         }
       });
 
       console.log(`Triggered workflow ${workflow_id} for repo ${repo}`);
-      setError(`Succesfully triggered workflow ${workflow_id} for repo ${repo}`);
+      setError(`Successfully triggered workflow ${workflow_id} for repo ${repo}`);
       setTimeout(() => setError(null), 3000);
     } catch (err) {
       const error = err as Error;
